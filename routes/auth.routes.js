@@ -57,18 +57,16 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user.id }, config.get('priveteKey'), {
       expiresIn: '1h',
     });
-    return res
-      .json({
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          diskSpace: user.diskSpace,
-          usedSpace: user.usedSpace,
-          avatar: user.avatar,
-        },
-      })
-      .send('okkk');
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        diskSpace: user.diskSpace,
+        usedSpace: user.usedSpace,
+        avatar: user.avatar,
+      },
+    });
   } catch (error) {
     console.log(error);
     res.send({ message: 'Server Error.' });

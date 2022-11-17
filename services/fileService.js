@@ -13,6 +13,7 @@ class FileService {
           reject({ message: 'File already exist' });
         }
       } catch (error) {
+        console.log(error);
         return reject({ message: 'file error' });
       }
     });
