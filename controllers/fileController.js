@@ -41,10 +41,9 @@ class FileController {
     }
   }
   async uploadFile(req, res) {
-    console.log(req);
+    console.log('REQUEST');
     try {
       const file = req.files.file;
-
       const parent = await File.findOne({
         user: req.user.id,
         _id: req.body.parent,
@@ -56,11 +55,24 @@ class FileController {
       }
       user.usedSpace += file.size;
 
+      const findParent = async (par) => {
+        if (par.parent) {
+          const parentId = await File.findOne({
+            _id: par.parent,
+          });
+          parentId.size += file.size;
+          await parentId.save();
+          findParent(parentId);
+        }
+      };
       let path;
+      findParent(parent);
       if (parent) {
         path = `${config.get('filePath')}\\${user._id}\\${parent.path}\\${
           file.name
         }`;
+        parent.size += file.size;
+        await parent.save();
       } else {
         path = `${config.get('filePath')}\\${user._id}\\${file.name}`;
       }
@@ -115,11 +127,33 @@ class FileController {
   async deleteFile(req, res) {
     try {
       const file = await File.findOne({ _id: req.query.id, user: req.user.id });
+      const user = await User.findOne({ _id: req.user.id });
+      const findParent = async (par) => {
+        if (par.parent) {
+          const parentId = await File.findOne({
+            _id: par.parent,
+          });
+          parentId.size -= file.size;
+          await parentId.save();
+          findParent(parentId);
+        }
+      };
+      if (file.parent) {
+        const parent = await File.findOne({
+          _id: file.parent,
+        });
+        parent.size -= file.size;
+        await parent.save();
+        findParent(parent);
+      }
       if (!file) {
         return res.status(400).json({ message: 'file not found' });
       }
+
+      user.usedSpace = user.usedSpace - file.size;
       fileService.deleteFile(file);
       await file.remove();
+      await user.save();
       return res.json({ message: 'file has been deleted' });
     } catch (error) {
       console.log(error);
