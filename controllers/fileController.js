@@ -41,7 +41,6 @@ class FileController {
     }
   }
   async uploadFile(req, res) {
-    console.log('REQUEST');
     try {
       const file = req.files.file;
       const parent = await File.findOne({
@@ -66,13 +65,14 @@ class FileController {
         }
       };
       let path;
-      findParent(parent);
+
       if (parent) {
         path = `${config.get('filePath')}\\${user._id}\\${parent.path}\\${
           file.name
         }`;
         parent.size += file.size;
         await parent.save();
+        findParent(parent);
       } else {
         path = `${config.get('filePath')}\\${user._id}\\${file.name}`;
       }
@@ -150,7 +150,7 @@ class FileController {
         return res.status(400).json({ message: 'file not found' });
       }
 
-      user.usedSpace = user.usedSpace - file.size;
+      user.usedSpace -= file.size;
       fileService.deleteFile(file);
       await file.remove();
       await user.save();
