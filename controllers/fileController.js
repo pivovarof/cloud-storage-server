@@ -129,6 +129,12 @@ class FileController {
       });
 
       await dbFile.save();
+      if (dbFile.parent) {
+        const parent = await File.findOne({ _id: dbFile.parent });
+        parent.childs.push(dbFile._id);
+        await parent.save();
+      }
+
       await user.save();
 
       res.json(dbFile);
@@ -141,9 +147,7 @@ class FileController {
   async downloadFile(req, res) {
     try {
       const file = await File.findOne({ _id: req.query.id, user: req.user.id });
-
-      const path =
-        config.get('filePath') + '\\' + req.user.id + '\\' + file.path;
+      const path = fileService.getPath(file);
 
       if (fs.existsSync(path)) {
         return res.download(path, file.name);
@@ -159,6 +163,26 @@ class FileController {
     try {
       const file = await File.findOne({ _id: req.query.id, user: req.user.id });
       const user = await User.findOne({ _id: req.user.id });
+      // const delChild = async (files) => {
+      //   if (files.childs.length !== 0) {
+      //     files.childs.forEach(async (child) => {
+      //       const fileChild = await File.findOne({ _id: child });
+
+      //       if (fileChild.childs.length !== 0) {
+      //         delChild(fileChild.childs);
+      //       } else {
+      //         fileService.deleteFile(fileChild);
+      //         await fileChild.remove();
+      //         fileService.deleteFile(files);
+      //         await files.remove();
+      //       }
+      //     });
+      //   } else {
+      //     fileService.deleteFile(files);
+      //     await files.remove();
+      //   }
+      // };
+      // delChild(file);
       const findParent = async (par) => {
         if (par.parent) {
           const parentId = await File.findOne({
@@ -174,6 +198,8 @@ class FileController {
           _id: file.parent,
         });
         parent.size -= file.size;
+        let i = parent.childs.indexOf(file._id);
+        parent.childs.splice(i, 1);
         await parent.save();
         findParent(parent);
       }
